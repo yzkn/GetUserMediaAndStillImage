@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html lang="ja">
+
+<head>
+    <style>
+        img {
+            width: 640px;
+            height: 480px;
+        }
+
+        video {
+            display: block;
+            background-color: black;
+            width: 640px;
+            height: 480px;
+        }
+    </style>
+    <title>GetUserMedia</title>
+</head>
+
+<body>
+    <h3>GetUserMedia</h3>
+    <div>
+        <select id="select">
+            <option value="">Camera id:</option>
+        </select>
+        <div>
+            <video id="video"></video>
+            <img id="image" />
+        </div>
+    </div>
+    <script>
+        function render(videoSroucesArray) {
+            var sEle = document.querySelector('#select')
+            videoSroucesArray.forEach(function (source, idx) {
+                var label = source.label !== '' ? source.label : ('id' + idx);
+                sEle.insertAdjacentHTML(
+                    'beforeend',
+                    '<option value="' + source.deviceId + '">' + label + '</option>'
+                );
+            });
+            return this;
+        }
+
+        window.onload = function () {
+            'use strict';
+
+            if (typeof navigator.mediaDevices.getUserMedia !== 'undefined' && navigator.mediaDevices.enumerateDevices !==
+                'undefined') {
+                navigator.mediaDevices.enumerateDevices().then(function (sourcesInfo) {
+                    var videoSroucesArray = sourcesInfo.filter(function (elem) {
+                        return elem.kind == 'videoinput';
+                    });
+                    render(videoSroucesArray);
+                });
+            }
+
+            var cStream;
+
+            function start(e) {
+                if (cStream) {
+                    cStream.getVideoTracks().forEach(function (devise) {
+                        devise.stop();
+                    });
+                    cStream = null;
+                }
+
+                if (e.target.value === '') {
+                    return;
+                }
+
+                navigator.mediaDevices.getUserMedia({
+                    video: {
+                        optional: [{
+                            sourceId: e.target.value
+                        }]
+                    }
+                }).then(function (stream) {
+                    cStream = stream;
+                    var vEle = document.querySelector('#video');
+                    vEle.srcObject = stream;
+                    vEle.play();
+                }, function () {
+                    console.log('err: ' + arguments);
+                })
+            }
+
+            function setStillImage() {
+                var cEle = document.createElement('canvas');
+                var vEle = document.getElementById('video');
+                var iEle = document.getElementById('image');
+
+                var cCtx = cEle.getContext('2d');
+
+                var width = Math.max(1, Math.floor(vEle.videoWidth));
+                var height = Math.max(1, Math.floor(vEle.videoHeight));
+
+                cEle.width = width;
+                cEle.height = height;
+                iEle.width = width;
+                iEle.height = height;
+
+                cCtx.drawImage(vEle, 0, 0, width, height);
+                iEle.src = cEle.toDataURL();
+
+                console.log(cEle.toDataURL());
+            }
+
+            var sEle = document.getElementById('select');
+            sEle.addEventListener('change', start, false);
+            var vEle = document.getElementById('video');
+            vEle.addEventListener('click', setStillImage, false);
+        };
+    </script>
+</body>
+
+</html>
